@@ -26,13 +26,17 @@ sign_in_button.click()
 driver.implicitly_wait(10)
 
 enter_email = driver.find_element(By.ID, "ap_email")
-enter_email.send_keys("your_email")
+# Read email and password from credentials file
+with open('credentials.json') as f:
+    credentials = json.load(f)
+
+enter_email.send_keys(credentials['email'])
 
 continue_button = driver.find_element(By.ID, "continue")
 continue_button.click()
 
 enter_password = driver.find_element(By.ID, "ap_password")
-enter_password.send_keys("1234567")
+enter_password.send_keys(credentials['password'])
 
 pass_signin_button = driver.find_element(By.ID, "signInSubmit")
 pass_signin_button.click()
