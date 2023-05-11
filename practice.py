@@ -85,3 +85,4 @@ with open("product_urls.json", "w") as f:
 # Close the browser
 time.sleep(random.randint(10,20))
 driver.quit()
+
