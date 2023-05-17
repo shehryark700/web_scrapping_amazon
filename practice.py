@@ -1,12 +1,13 @@
 import json
 import random
+import re
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# Create a new instance of the chrome driver
+# Create a new instance of the Chrome driver
 driver = webdriver.Chrome()
 
 # Navigate to the Amazon UK homepage
@@ -27,8 +28,8 @@ driver.implicitly_wait(10)
 
 enter_email = driver.find_element(By.ID, "ap_email")
 # Read email and password from credentials file
-with open('credentials.json') as f:
-    credentials = json.load(f)
+with open('credentials.json') as personal:
+    credentials = json.load(personal)
 
 enter_email.send_keys(credentials['email'])
 
@@ -41,7 +42,7 @@ enter_password.send_keys(credentials['password'])
 pass_signin_button = driver.find_element(By.ID, "signInSubmit")
 pass_signin_button.click()
 
-# Select UK as delivery location
+# Select UK as the delivery location
 select_delivery_option = driver.find_element(By.ID, "glow-ingress-line2")
 select_delivery_option.click()
 driver.implicitly_wait(10)
@@ -54,10 +55,11 @@ driver.implicitly_wait(10)
 apply_button = driver.find_element(By.ID, "GLUXZipUpdate")
 apply_button.click()
 driver.implicitly_wait(10)
+time.sleep(random.randint(5, 10))
 
 # Navigate to the kitchen and home appliances page
 driver.get("https://www.amazon.co.uk/s?bbn=391784011&rh=n%3A391784011%2Cp_85%3A20930949031&dc&qid=1683639353&rnid=20930948031&ref=lp_391784011_nr_p_85_1")
-driver.implicitly_wait(random.randint(5,10))
+driver.implicitly_wait(random.randint(5, 10))
 
 starting_page = 2
 ending_page = 6
@@ -67,26 +69,52 @@ all_links = []
 for i in range(starting_page, ending_page):
     try:
         # Find all products on the page
-        all_products = driver.find_elements(By.CSS_SELECTOR, "div[data-component-type='s-search-result'] h2 a")
+        all_products = driver.find_elements(By.CSS_SELECTOR, "div[data-component-type='s-search-result']")
 
-        # Extract the URLs from the links
-        page_links = [link.get_attribute("href") for link in all_products]
-        all_links.extend(page_links)
+        # Extract the title and URL of each product
+        for product in all_products:
+            title_element = product.find_element(By.CSS_SELECTOR, "h2 a")
+            title = title_element.text
+            url = title_element.get_attribute("href")
+
+            # Add the title and URL to the list
+            all_links.append({'url': url, 'title': title})
 
         # Navigate to the next page
-        next_page = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, f"//a[@aria-label='Go to page {i+1}']")))
+        next_page = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, f"//a[@aria-label='Go to page {i + 1}']")))
         next_page.click()
 
-        # Wait for the page to load
-        driver.implicitly_wait(random.randint(5,10))
-    except:
-        print("Failed to navigate to page {}".format(i))
+    except Exception as e:
+        print(f"Error on page {i}: {e}")
 
-# Write the URLs to a JSON file
-with open("product_urls.json", "w") as f:
-    json.dump({'url':all_links}, f, indent=4)
+# Save the links to a JSON file
+with open('amazon_links.json', 'w') as output:
+    json.dump(all_links, output, indent=4)
 
-# Close the browser
-time.sleep(random.randint(10,20))
+# Open the first link from the list
+if all_links:
+    first_link = all_links[0]['url']
+    driver.get(first_link)
+
+# Get the three images from the link
+images = []
+try:
+    full_image_script = driver.find_element(By.XPATH, '//*[@id="imageBlock_feature_div"]/script')
+    # using regex to find
+    full_image_urls = re.findall(r'"hiRes":"(.*?)"', full_image_script.get_attribute('innerHTML'))
+    if full_image_urls:
+        images.extend(full_image_urls[:3])
+    else:
+        images.append("Image not available")
+except:
+    images = ["Image not available"]
+
+all_links[0]['image'] = images
+# dump images into json file
+with open('amazon_links.json', 'w') as output:
+    json.dump(all_links, output, indent=4)
+
+# close the browser
+time.sleep(random.randint(10, 20))
 driver.quit()
-
