@@ -88,30 +88,27 @@ for i in range(starting_page, ending_page):
     except Exception as e:
         print(f"Error on page {i}: {e}")
 
-# Save the links to a JSON file
-with open('amazon_links.json', 'w') as output:
-    json.dump(all_links, output, indent=4)
+# Open the links from the list and get the three images for each link
+for link in all_links:
+    link_url = link['url']
+    driver.get(link_url)
 
-# Open the first link from the list
-if all_links:
-    first_link = all_links[0]['url']
-    driver.get(first_link)
+    # Get the three images from the link
+    images = []
+    try:
+        full_image_script = driver.find_element(By.XPATH, '//*[@id="imageBlock_feature_div"]/script')
+        # using regex to find
+        full_image_urls = re.findall(r'"hiRes":"(.*?)"', full_image_script.get_attribute('innerHTML'))
+        if full_image_urls:
+            images.extend(full_image_urls[:3])
+        else:
+            images.append("Image not available")
+    except:
+        images = ["Image not available"]
 
-# Get the three images from the link
-images = []
-try:
-    full_image_script = driver.find_element(By.XPATH, '//*[@id="imageBlock_feature_div"]/script')
-    # using regex to find
-    full_image_urls = re.findall(r'"hiRes":"(.*?)"', full_image_script.get_attribute('innerHTML'))
-    if full_image_urls:
-        images.extend(full_image_urls[:3])
-    else:
-        images.append("Image not available")
-except:
-    images = ["Image not available"]
+    link['image'] = images
 
-all_links[0]['image'] = images
-# dump images into json file
+# Save the links and images to a JSON file
 with open('amazon_links.json', 'w') as output:
     json.dump(all_links, output, indent=4)
 
